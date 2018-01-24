@@ -1,0 +1,65 @@
+version: '3.4'
+services:
+    hello-producer:
+        container_name: hello-producer
+        build:
+            context: ./hello-producer
+        image: hello-producer:latest
+        ports:
+            - "8080:8080"
+        networks:
+            - hello-network
+        depends_on:
+            - hello-rabbitmq
+    hello-counter:
+        container_name: hello-counter
+        build:
+            context: ./hello-counter
+        image: hello-counter:latest
+        networks:
+            - hello-network
+        depends_on:
+            - hello-counter-mysql
+            - hello-rabbitmq
+    hello-counter-mysql:
+        container_name: hello-counter-mysql
+        image: mysql:latest
+        expose:
+            - 3306
+        volumes:
+            - ./data/counter-mysql:/var/lib/mysql
+        environment:
+           - 'MYSQL_ROOT_PASSWORD=micro$$erv1ces!' 
+           - "MYSQL_DATABASE=hello_counter"
+        networks:
+            - hello-network
+    hello-responder:
+        container_name: hello-responder
+        build:
+            context: ./hello-responder
+        image: hello-responder:latest
+        networks:
+            - hello-network
+        depends_on:
+            - hello-rabbitmq
+        deploy:
+          replicas: 2
+          resources:
+            limits:
+              cpus: "1"
+              memory: 1024M
+          restart_policy:
+            condition: on-failure
+    hello-rabbitmq:
+        container_name: hello-rabbitmq
+        image: rabbitmq:3.6.11-management
+        ports:
+            - 15672:15672
+        networks:
+            - hello-network
+        volumes:
+            - ./data/rabbitmq:/var/lib/rabbitmq     
+networks:
+    hello-network:
+        external:
+          name: hello-network
